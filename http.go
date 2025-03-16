@@ -41,3 +41,9 @@ type Options struct {
 	// is zero or negative, there is no timeout.
 	IdleTimeout time.Duration
 }
+
+// HandleFunc is a struct that contains the pattern and the handler function.
+type HandleFunc struct {
+	Pattern string
+	Handler http.HandlerFunc
+}
