@@ -5,10 +5,12 @@ import (
 	"time"
 )
 
+// Server provides a convenient wrapper around the standard library's http.Server.
 type Server struct {
 	HttpServer *http.Server
 }
 
+// Options contains arguments to configure a Server instance.
 type Options struct {
 	// Addr optionally specifies the TCP address for the server to listen on,
 	// in the form "host:port". If empty, ":http" (port 80) is used.
