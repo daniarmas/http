@@ -47,3 +47,25 @@ type HandleFunc struct {
 	Pattern string
 	Handler http.HandlerFunc
 }
+
+// NewServer creates a new Server instance with the given endpoints and options.
+func New(opts Options, endpoints ...HandleFunc) *Server {
+	// Create a new ServeMux and register the endpoints.
+	mux := http.NewServeMux()
+	// Health check endpoint
+	mux.HandleFunc("GET /health", HealthCheckHandler)
+	// Register the endpoints
+	for _, endpoint := range endpoints {
+		mux.HandleFunc(endpoint.Pattern, endpoint.Handler)
+	}
+
+	return &Server{
+		HttpServer: &http.Server{
+			Addr:         opts.Addr,
+			Handler:      mux,
+			ReadTimeout:  opts.ReadTimeout,
+			WriteTimeout: opts.WriteTimeout,
+			IdleTimeout:  opts.IdleTimeout,
+		},
+	}
+}
