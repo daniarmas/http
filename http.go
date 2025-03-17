@@ -59,10 +59,14 @@ func New(opts Options, endpoints ...HandleFunc) *Server {
 		mux.HandleFunc(endpoint.Pattern, endpoint.Handler)
 	}
 
+	var handler http.Handler = mux
+	// Add middlewares
+	handler = AllowCORS(handler)
+
 	return &Server{
 		HttpServer: &http.Server{
 			Addr:         opts.Addr,
-			Handler:      mux,
+			Handler:      handler,
 			ReadTimeout:  opts.ReadTimeout,
 			WriteTimeout: opts.WriteTimeout,
 			IdleTimeout:  opts.IdleTimeout,
