@@ -11,6 +11,7 @@ import (
 	"time"
 
 	httpserver "github.com/daniarmas/http"
+	"github.com/daniarmas/http/response"
 )
 
 func main() {
@@ -45,6 +46,6 @@ func main() {
 
 func PingHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("pong"))
+		response.OK(w, r, "pong")
 	}
 }
