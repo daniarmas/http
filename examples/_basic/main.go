@@ -25,7 +25,7 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  15 * time.Second,
 	}, httpserver.HandleFunc{
-		Pattern: "/",
+		Pattern: "/ping",
 		Handler: PingHandler(),
 	})
 

@@ -56,6 +56,8 @@ func New(opts Options, endpoints ...HandleFunc) *Server {
 	mux := http.NewServeMux()
 	// Health check endpoint
 	mux.HandleFunc("GET /health", HealthCheckHandler)
+	// Not found endpoint
+	mux.HandleFunc("/", NotFoundHandler)
 	// Register the endpoints
 	for _, endpoint := range endpoints {
 		mux.HandleFunc(endpoint.Pattern, endpoint.Handler)
