@@ -1,7 +1,9 @@
 package http
 
 import (
+	"context"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -72,4 +74,41 @@ func New(opts Options, endpoints ...HandleFunc) *Server {
 			IdleTimeout:  opts.IdleTimeout,
 		},
 	}
+}
+
+// Shutdown gracefully shuts down the server without interrupting any
+// active connections. Shutdown works by first closing all open
+// listeners, then closing all idle connections, and then waiting
+// indefinitely for connections to return to idle and then shut down.
+// If the provided context expires before the shutdown is complete,
+// Shutdown returns the context's error, otherwise it returns any
+// error returned from closing the [Server]'s underlying Listener(s).
+//
+// When Shutdown is called, [Serve], [ListenAndServe], and
+// [ListenAndServeTLS] immediately return [ErrServerClosed]. Make sure the
+// program doesn't exit and waits instead for Shutdown to return.
+//
+// Shutdown does not attempt to close nor wait for hijacked
+// connections such as WebSockets. The caller of Shutdown should
+// separately notify such long-lived connections of shutdown and wait
+// for them to close, if desired. See [Server.RegisterOnShutdown] for a way to
+// register shutdown notification functions.
+//
+// Once Shutdown has been called on a server, it may not be reused;
+// future calls to methods such as Serve will return ErrServerClosed.
+func (s *Server) Shutdown(ctx context.Context) error {
+	// Gracefully shutdown the server.
+	var shutdownErr error
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-ctx.Done()
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		shutdownErr = s.HttpServer.Shutdown(shutdownCtx)
+	}()
+	wg.Wait()
+	return shutdownErr
 }

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -22,9 +21,9 @@ func main() {
 	// Create a new server with the given options and endpoints.
 	server := httpserver.New(httpserver.Options{
 		Addr:         net.JoinHostPort("0.0.0.0", "8080"),
-		ReadTimeout:  5,
-		WriteTimeout: 10,
-		IdleTimeout:  15,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  15 * time.Second,
 	}, httpserver.HandleFunc{
 		Pattern: "/",
 		Handler: PingHandler(),
@@ -39,21 +38,9 @@ func main() {
 	}()
 
 	// Gracefully shutdown the server.
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		<-ctx.Done()
-		log.Println("Shutting down server...")
-
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		if err := server.HttpServer.Shutdown(shutdownCtx); err != nil {
-			log.Fatalf("Error shutting down server: %v", err)
-		}
-		log.Println("Server gracefully stopped")
-	}()
-	wg.Wait()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("error shutting down server: %v", err)
+	}
 }
 
 func PingHandler() http.HandlerFunc {
