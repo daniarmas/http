@@ -21,6 +21,18 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
+	// Routes
+	routes := []httpserver.HandleFunc{
+		{
+			Pattern: "/panic",
+			Handler: PanicHandler(),
+		},
+		{
+			Pattern: "/ping",
+			Handler: PingHandler(),
+		},
+	}
+
 	// Create a new server with the given options and endpoints.
 	server := httpserver.New(httpserver.Options{
 		Addr:         net.JoinHostPort("0.0.0.0", "8080"),
@@ -28,16 +40,14 @@ func main() {
 		WriteTimeout: 1000 * time.Second,
 		IdleTimeout:  1500 * time.Second,
 		Middlewares: []middleware.Middleware{
+			middleware.RecoverMiddleware,
 			middleware.AllowCors(middleware.CorsOptions{
 				AllowedOrigin:  "http://localhost:3000",
 				AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 				AllowedHeaders: []string{"Content-Type", "Authorization"},
 			}),
 		},
-	}, httpserver.HandleFunc{
-		Pattern: "/ping",
-		Handler: PingHandler(),
-	})
+	}, routes...)
 
 	// Start the server in a separate goroutine.
 	go func() {
@@ -50,6 +60,14 @@ func main() {
 	// Gracefully shutdown the server.
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatalf("error shutting down server: %v", err)
+	}
+}
+
+// PanicHandler is an HTTP handler that panics.
+func PanicHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Simulate a panic to test the RecoverMiddleware.
+		panic("Oops!")
 	}
 }
 

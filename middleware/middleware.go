@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"regexp"
+	"runtime/debug"
 
 	"github.com/daniarmas/http/response"
 )
@@ -32,6 +34,19 @@ func validateCorsOrigin(origin string) bool {
 
 	// Validate the origin using the regex pattern
 	return re.MatchString(origin)
+}
+
+// RecoverMiddleware is an HTTP middleware that recovers from panics and returns 500 Internal Server Error.
+func RecoverMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("Recovered from panic: %v\n%s", err, debug.Stack())
+				response.InternalServerError(w, r)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
 }
 
 // AllowCORS returns a middleware that sets the CORS headers.
