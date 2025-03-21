@@ -11,6 +11,8 @@ import (
 	"time"
 
 	httpserver "github.com/daniarmas/http"
+
+	"github.com/daniarmas/http/middleware"
 	"github.com/daniarmas/http/response"
 )
 
@@ -22,9 +24,16 @@ func main() {
 	// Create a new server with the given options and endpoints.
 	server := httpserver.New(httpserver.Options{
 		Addr:         net.JoinHostPort("0.0.0.0", "8080"),
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  15 * time.Second,
+		ReadTimeout:  1000 * time.Second,
+		WriteTimeout: 1000 * time.Second,
+		IdleTimeout:  1500 * time.Second,
+		Middlewares: []middleware.Middleware{
+			middleware.AllowCors(middleware.CorsOptions{
+				AllowedOrigin:  "http://localhost:3000",
+				AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+				AllowedHeaders: []string{"Content-Type", "Authorization"},
+			}),
+		},
 	}, httpserver.HandleFunc{
 		Pattern: "/ping",
 		Handler: PingHandler(),

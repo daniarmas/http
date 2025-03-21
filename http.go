@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/daniarmas/http/middleware"
 )
 
 // Server provides a convenient wrapper around the standard library's http.Server.
@@ -42,6 +44,11 @@ type Options struct {
 	// of ReadTimeout is used. If negative, or if zero and ReadTimeout
 	// is zero or negative, there is no timeout.
 	IdleTimeout time.Duration
+
+	// Middlewares is a slice of http.Handler that can be used to apply
+	// middleware to the HTTP server. These middlewares will be applied
+	// in the order they are provided.
+	Middlewares []middleware.Middleware
 }
 
 // HandleFunc is a struct that contains the pattern and the handler function.
@@ -64,8 +71,10 @@ func New(opts Options, endpoints ...HandleFunc) *Server {
 	}
 
 	var handler http.Handler = mux
-	// Add middlewares
-	handler = AllowCORS(handler)
+	// Add the middlewares in the order they are provided.
+	for _, middleware := range opts.Middlewares {
+		handler = middleware(handler)
+	}
 
 	return &Server{
 		HttpServer: &http.Server{
