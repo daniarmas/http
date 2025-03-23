@@ -50,17 +50,9 @@ func main() {
 		},
 	}, routes...)
 
-	// Start the server in a separate goroutine.
-	go func() {
-		log.Printf("Server is running at http://%s\n", server.HttpServer.Addr)
-		if err := server.HttpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Error starting server: %v", err)
-		}
-	}()
-
-	// Gracefully shutdown the server.
-	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("error shutting down server: %v", err)
+	// Run the server and handle graceful shutdown.
+	if err := server.Run(ctx); err != nil {
+		log.Fatal(err)
 	}
 }
 
