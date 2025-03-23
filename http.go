@@ -2,8 +2,9 @@ package http
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/daniarmas/http/middleware"
@@ -72,9 +73,9 @@ func New(opts Options, endpoints ...HandleFunc) *Server {
 
 	var handler http.Handler = mux
 	// Add the middlewares in reverse order so they are executed in the order they are provided.
-    for i := len(opts.Middlewares) - 1; i >= 0; i-- {
-        handler = opts.Middlewares[i](handler)
-    }
+	for i := len(opts.Middlewares) - 1; i >= 0; i-- {
+		handler = opts.Middlewares[i](handler)
+	}
 
 	return &Server{
 		HttpServer: &http.Server{
@@ -87,39 +88,31 @@ func New(opts Options, endpoints ...HandleFunc) *Server {
 	}
 }
 
-// Shutdown gracefully shuts down the server without interrupting any
-// active connections. Shutdown works by first closing all open
-// listeners, then closing all idle connections, and then waiting
-// indefinitely for connections to return to idle and then shut down.
-// If the provided context expires before the shutdown is complete,
-// Shutdown returns the context's error, otherwise it returns any
-// error returned from closing the [Server]'s underlying Listener(s).
-//
-// When Shutdown is called, [Serve], [ListenAndServe], and
-// [ListenAndServeTLS] immediately return [ErrServerClosed]. Make sure the
-// program doesn't exit and waits instead for Shutdown to return.
-//
-// Shutdown does not attempt to close nor wait for hijacked
-// connections such as WebSockets. The caller of Shutdown should
-// separately notify such long-lived connections of shutdown and wait
-// for them to close, if desired. See [Server.RegisterOnShutdown] for a way to
-// register shutdown notification functions.
-//
-// Once Shutdown has been called on a server, it may not be reused;
-// future calls to methods such as Serve will return ErrServerClosed.
-func (s *Server) Shutdown(ctx context.Context) error {
-	// Gracefully shutdown the server.
-	var shutdownErr error
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		<-ctx.Done()
+// Run starts the server and handles graceful shutdown.
+func (s *Server) Run(ctx context.Context) error {
+	var err error
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		shutdownErr = s.HttpServer.Shutdown(shutdownCtx)
+	// Start the server in a separate goroutine.
+	go func() {
+		log.Printf("server is running at http://%s\n", s.HttpServer.Addr)
+		if err = s.HttpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			err = fmt.Errorf("error starting server: %w", err)
+		}
 	}()
-	wg.Wait()
-	return shutdownErr
+
+	// Wait for the context to be canceled.
+	<-ctx.Done()
+
+	// Gracefully shutdown the server.
+	log.Println("shutting down server")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err = s.HttpServer.Shutdown(shutdownCtx); err != nil {
+		err = fmt.Errorf("error shutting down server: %w", err)
+		return err
+	} else {
+		log.Println("server gracefully stopped")
+	}
+
+	return err
 }
