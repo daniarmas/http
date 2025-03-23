@@ -25,20 +25,20 @@ func main() {
 	routes := []httpserver.HandleFunc{
 		{
 			Pattern: "/panic",
-			Handler: PanicHandler(),
+			Handler: PanicHandler,
 		},
 		{
 			Pattern: "/ping",
-			Handler: PingHandler(),
+			Handler: PingHandler,
 		},
 	}
 
 	// Create a new server with the given options and endpoints.
 	server := httpserver.New(httpserver.Options{
 		Addr:         net.JoinHostPort("0.0.0.0", "8080"),
-		ReadTimeout:  1000 * time.Second,
-		WriteTimeout: 1000 * time.Second,
-		IdleTimeout:  1500 * time.Second,
+		ReadTimeout:  1000 * time.Second, // 1000 seconds to allow for debugging
+		WriteTimeout: 1000 * time.Second, // 1000 seconds to allow for debugging
+		IdleTimeout:  1000 * time.Second, // 1000 seconds to allow for debugging
 		Middlewares: []middleware.Middleware{
 			middleware.RecoverMiddleware,
 			middleware.AllowCors(middleware.CorsOptions{
@@ -64,15 +64,12 @@ func main() {
 }
 
 // PanicHandler is an HTTP handler that panics.
-func PanicHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Simulate a panic to test the RecoverMiddleware.
-		panic("Oops!")
-	}
+func PanicHandler(w http.ResponseWriter, r *http.Request) {
+	// Simulate a panic to test the RecoverMiddleware.
+	panic("Oops!")
 }
 
-func PingHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		response.OK(w, r, "pong")
-	}
+// PingHandler is an HTTP handler that returns a pong response.
+func PingHandler(w http.ResponseWriter, r *http.Request) {
+	response.OK(w, r, "pong")
 }
