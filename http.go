@@ -71,10 +71,10 @@ func New(opts Options, endpoints ...HandleFunc) *Server {
 	}
 
 	var handler http.Handler = mux
-	// Add the middlewares in the order they are provided.
-	for _, middleware := range opts.Middlewares {
-		handler = middleware(handler)
-	}
+	// Add the middlewares in reverse order so they are executed in the order they are provided.
+    for i := len(opts.Middlewares) - 1; i >= 0; i-- {
+        handler = opts.Middlewares[i](handler)
+    }
 
 	return &Server{
 		HttpServer: &http.Server{

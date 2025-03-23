@@ -40,12 +40,13 @@ func main() {
 		WriteTimeout: 1000 * time.Second, // 1000 seconds to allow for debugging
 		IdleTimeout:  1000 * time.Second, // 1000 seconds to allow for debugging
 		Middlewares: []middleware.Middleware{
-			middleware.RecoverMiddleware,
+			middleware.LoggingMiddleware,
 			middleware.AllowCors(middleware.CorsOptions{
 				AllowedOrigin:  "http://localhost:3000",
 				AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 				AllowedHeaders: []string{"Content-Type", "Authorization"},
 			}),
+			middleware.RecoverMiddleware,
 		},
 	}, routes...)
 

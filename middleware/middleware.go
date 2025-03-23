@@ -2,9 +2,11 @@ package middleware
 
 import (
 	"log"
+	"net"
 	"net/http"
 	"regexp"
 	"runtime/debug"
+	"time"
 
 	"github.com/daniarmas/http/response"
 )
@@ -70,4 +72,67 @@ func AllowCors(options CorsOptions) Middleware {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// LoggingMiddleware logs the details of each API request and response.
+func LoggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		// Create a response writer that captures the status code and response size.
+		lrw := &loggingResponseWriter{ResponseWriter: w}
+
+		// Call the next handler.
+		next.ServeHTTP(lrw, r)
+
+		// Calculate the response time in microseconds.
+		durationMicro := time.Since(start).Microseconds()
+		durationMilli := float64(durationMicro) / 1000.0
+
+		// Extract the client IP address without the port.
+		clientIP, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			clientIP = r.RemoteAddr
+		} else {
+			// Convert to IPv4 if possible
+			ip := net.ParseIP(clientIP)
+			if ip != nil {
+				if ipv4 := ip.To4(); ipv4 != nil {
+					clientIP = ipv4.String()
+				}
+			}
+		}
+
+		// Log the request and response details.
+		log.Printf(
+			"Endpoint: %s, Method: %s, Status: %d, Duration: %.3f ms, ResponseSize: %d bytes, ClientIP: %s, UserAgent: %s",
+			r.RequestURI,
+			r.Method,
+			lrw.statusCode,
+			durationMilli,
+			lrw.responseSize,
+			clientIP,
+			r.UserAgent(),
+		)
+	})
+}
+
+// loggingResponseWriter is a custom response writer that captures the status code and response size.
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	statusCode   int
+	responseSize int
+}
+
+// WriteHeader captures the status code.
+func (lrw *loggingResponseWriter) WriteHeader(statusCode int) {
+	lrw.statusCode = statusCode
+	lrw.ResponseWriter.WriteHeader(statusCode)
+}
+
+// Write captures the response size.
+func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
+	size, err := lrw.ResponseWriter.Write(b)
+	lrw.responseSize += size
+	return size, err
 }
