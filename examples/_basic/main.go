@@ -11,6 +11,8 @@ import (
 	"time"
 
 	httpserver "github.com/daniarmas/http"
+
+	"github.com/daniarmas/http/middleware"
 	"github.com/daniarmas/http/response"
 )
 
@@ -19,16 +21,34 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
+	// Routes
+	routes := []httpserver.HandleFunc{
+		{
+			Pattern: "/panic",
+			Handler: PanicHandler,
+		},
+		{
+			Pattern: "/ping",
+			Handler: PingHandler,
+		},
+	}
+
 	// Create a new server with the given options and endpoints.
 	server := httpserver.New(httpserver.Options{
 		Addr:         net.JoinHostPort("0.0.0.0", "8080"),
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  15 * time.Second,
-	}, httpserver.HandleFunc{
-		Pattern: "/ping",
-		Handler: PingHandler(),
-	})
+		ReadTimeout:  1000 * time.Second, // 1000 seconds to allow for debugging
+		WriteTimeout: 1000 * time.Second, // 1000 seconds to allow for debugging
+		IdleTimeout:  1000 * time.Second, // 1000 seconds to allow for debugging
+		Middlewares: []middleware.Middleware{
+			middleware.LoggingMiddleware,
+			middleware.AllowCors(middleware.CorsOptions{
+				AllowedOrigin:  "http://localhost:3000",
+				AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+				AllowedHeaders: []string{"Content-Type", "Authorization"},
+			}),
+			middleware.RecoverMiddleware,
+		},
+	}, routes...)
 
 	// Start the server in a separate goroutine.
 	go func() {
@@ -44,8 +64,13 @@ func main() {
 	}
 }
 
-func PingHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		response.OK(w, r, "pong")
-	}
+// PanicHandler is an HTTP handler that panics.
+func PanicHandler(w http.ResponseWriter, r *http.Request) {
+	// Simulate a panic to test the RecoverMiddleware.
+	panic("Oops!")
+}
+
+// PingHandler is an HTTP handler that returns a pong response.
+func PingHandler(w http.ResponseWriter, r *http.Request) {
+	response.OK(w, r, "pong")
 }
