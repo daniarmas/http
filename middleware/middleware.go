@@ -1,13 +1,14 @@
 package middleware
 
 import (
-	"log"
+	"fmt"
 	"net"
 	"net/http"
 	"regexp"
 	"runtime/debug"
 	"time"
 
+	"github.com/daniarmas/clogg"
 	"github.com/daniarmas/http/response"
 )
 
@@ -43,7 +44,7 @@ func RecoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("Recovered from panic: %v\n%s", err, debug.Stack())
+				clogg.Error(r.Context(), "recovered from panic", clogg.String("error", err.(string)), clogg.String("stack", string(debug.Stack())))
 				response.InternalServerError(w, r)
 			}
 		}()
@@ -104,15 +105,14 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Log the request and response details.
-		log.Printf(
-			"Endpoint: %s, Method: %s, Status: %d, Duration: %.3f ms, ResponseSize: %d bytes, ClientIP: %s, UserAgent: %s",
-			r.RequestURI,
-			r.Method,
-			lrw.statusCode,
-			durationMilli,
-			lrw.responseSize,
-			clientIP,
-			r.UserAgent(),
+		clogg.Info(r.Context(), "request",
+			clogg.String("endpoint", r.RequestURI),
+			clogg.String("method", r.Method),
+			clogg.Int("status", lrw.statusCode),
+			clogg.String("duration", fmt.Sprintf("%.3f ms", durationMilli)),
+			clogg.String("response_size", fmt.Sprintf("%d bytes", lrw.responseSize)),
+			clogg.String("client_ip", clientIP),
+			clogg.String("user_agent", r.UserAgent()),
 		)
 	})
 }
