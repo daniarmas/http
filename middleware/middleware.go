@@ -86,10 +86,6 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		// Call the next handler.
 		next.ServeHTTP(lrw, r)
 
-		// Calculate the response time in microseconds.
-		durationMicro := time.Since(start).Microseconds()
-		durationMilli := float64(durationMicro) / 1000.0
-
 		// Extract the client IP address without the port.
 		clientIP, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
@@ -103,6 +99,10 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 				}
 			}
 		}
+
+		// Calculate the response time in microseconds.
+		durationMicro := time.Since(start).Microseconds()
+		durationMilli := float64(durationMicro) / 1000.0
 
 		// Log the request and response details.
 		clogg.Info(r.Context(), "request",
