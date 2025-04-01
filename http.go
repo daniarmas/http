@@ -3,10 +3,10 @@ package http
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
+	"github.com/daniarmas/clogg"
 	"github.com/daniarmas/http/middleware"
 )
 
@@ -94,7 +94,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 	// Start the server in a separate goroutine.
 	go func() {
-		log.Printf("server is running at http://%s\n", s.HttpServer.Addr)
+		clogg.Info(ctx, fmt.Sprintf("server is running at http://%s\n", s.HttpServer.Addr))
 		if err = s.HttpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			err = fmt.Errorf("error starting server: %w", err)
 		}
@@ -104,14 +104,14 @@ func (s *Server) Run(ctx context.Context) error {
 	<-ctx.Done()
 
 	// Gracefully shutdown the server.
-	log.Println("shutting down server")
+	clogg.Info(ctx, "shutting down server")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err = s.HttpServer.Shutdown(shutdownCtx); err != nil {
 		err = fmt.Errorf("error shutting down server: %w", err)
 		return err
 	} else {
-		log.Println("server gracefully stopped")
+		clogg.Info(ctx, "server gracefully stopped")
 	}
 
 	return err
