@@ -94,7 +94,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 	// Start the server in a separate goroutine.
 	go func() {
-		clogg.Info(ctx, fmt.Sprintf("server is running at http://%s\n", s.HttpServer.Addr))
+		clogg.Info(ctx, fmt.Sprintf("server is running at http://%s", s.HttpServer.Addr))
 		if err = s.HttpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			err = fmt.Errorf("error starting server: %w", err)
 		}
