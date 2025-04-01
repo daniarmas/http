@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -12,6 +12,7 @@ import (
 
 	httpserver "github.com/daniarmas/http"
 
+	"github.com/daniarmas/clogg"
 	"github.com/daniarmas/http/middleware"
 	"github.com/daniarmas/http/response"
 )
@@ -20,6 +21,14 @@ func main() {
 	// Context
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+
+	// Set up clogg
+	handler := slog.NewJSONHandler(os.Stdout, nil)
+	logger := clogg.GetLogger(clogg.LoggerConfig{
+		BufferSize: 20,
+		Handler:    handler,
+	})
+	defer logger.Shutdown()
 
 	// Routes
 	routes := []httpserver.HandleFunc{
@@ -52,7 +61,8 @@ func main() {
 
 	// Run the server and handle graceful shutdown.
 	if err := server.Run(ctx); err != nil {
-		log.Fatal(err)
+		clogg.Error(ctx, "Failed to run server", clogg.String("error", err.Error()))
+		os.Exit(1)
 	}
 }
 
